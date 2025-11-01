@@ -3,18 +3,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { petsData, getUniqueBreeds } from '../data/pets';
+import { medicinesData } from '../data/medicines';
 
-export default function PetsPage() {
-  const [pets, setPets] = useState([]);
-  const [filteredPets, setFilteredPets] = useState([]);
+export default function MedicinesPage() {
+  const [medicines, setMedicines] = useState([]);
+  const [filteredMedicines, setFilteredMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    type: 'all',
-    breed: 'all',
-    age: 'all',
-    priceRange: 'all',
-    location: 'all'
+    category: 'all',
+    petType: 'all',
+    brand: 'all',
+    priceRange: 'all'
   });
   const [sortBy, setSortBy] = useState('featured');
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,13 +25,13 @@ export default function PetsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    loadPets();
+    loadMedicines();
     loadCartFromStorage();
   }, []);
 
   useEffect(() => {
-    filterAndSortPets();
-  }, [filters, sortBy, searchQuery, pets]);
+    filterAndSortMedicines();
+  }, [filters, sortBy, searchQuery, medicines]);
 
   const showNotification = (message, type = 'success') => {
     setNotification({ show: true, message, type });
@@ -58,67 +57,55 @@ export default function PetsPage() {
     }
   };
 
-  const loadPets = async () => {
+  const loadMedicines = async () => {
     try {
+      // Use the imported medicinesData directly
       setTimeout(() => {
-        setPets(petsData);
-        setFilteredPets(petsData);
+        setMedicines(medicinesData);
+        setFilteredMedicines(medicinesData);
         setLoading(false);
       }, 1000);
     } catch (error) {
-      console.error('Error loading pets:', error);
-      showNotification('Failed to load pets', 'error');
+      console.error('Error loading medicines:', error);
+      showNotification('Failed to load medicines', 'error');
       setLoading(false);
     }
   };
 
-  const filterAndSortPets = () => {
-    let filtered = [...pets];
+  const filterAndSortMedicines = () => {
+    let filtered = [...medicines];
 
     if (searchQuery) {
-      filtered = filtered.filter(pet =>
-        pet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pet.breed.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pet.description.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(medicine =>
+        medicine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        medicine.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        medicine.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        medicine.category.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(pet => pet.type === filters.type);
+    if (filters.category !== 'all') {
+      filtered = filtered.filter(medicine => medicine.category === filters.category);
     }
 
-    if (filters.breed !== 'all') {
-      filtered = filtered.filter(pet => pet.breed === filters.breed);
+    if (filters.petType !== 'all') {
+      filtered = filtered.filter(medicine => medicine.petType === filters.petType);
     }
 
-    if (filters.location !== 'all') {
-      filtered = filtered.filter(pet => pet.location === filters.location);
-    }
-
-    if (filters.age !== 'all') {
-      switch (filters.age) {
-        case 'puppy':
-          filtered = filtered.filter(pet => pet.age < 1);
-          break;
-        case 'young':
-          filtered = filtered.filter(pet => pet.age >= 1 && pet.age <= 3);
-          break;
-        case 'adult':
-          filtered = filtered.filter(pet => pet.age > 3);
-          break;
-      }
+    if (filters.brand !== 'all') {
+      filtered = filtered.filter(medicine => medicine.brand === filters.brand);
     }
 
     if (filters.priceRange !== 'all') {
       switch (filters.priceRange) {
-        case 'under-5000':
-          filtered = filtered.filter(pet => pet.price <= 5000);
+        case 'under-500':
+          filtered = filtered.filter(medicine => medicine.price < 500);
           break;
-        case '5000-10000':
-          filtered = filtered.filter(pet => pet.price > 5000 && pet.price <= 10000);
+        case '500-1500':
+          filtered = filtered.filter(medicine => medicine.price >= 500 && medicine.price <= 1500);
           break;
-        case 'over-10000':
-          filtered = filtered.filter(pet => pet.price > 10000);
+        case 'over-1500':
+          filtered = filtered.filter(medicine => medicine.price > 1500);
           break;
       }
     }
@@ -130,33 +117,39 @@ export default function PetsPage() {
       case 'price-high-low':
         filtered.sort((a, b) => b.price - a.price);
         break;
-      case 'age-low-high':
-        filtered.sort((a, b) => a.age - b.age);
-        break;
-      case 'age-high-low':
-        filtered.sort((a, b) => b.age - a.age);
+      case 'rating':
+        filtered.sort((a, b) => b.rating - a.rating);
         break;
       case 'newest':
         filtered.sort((a, b) => b.id - a.id);
+        break;
+      case 'discount':
+        filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
         break;
       default:
         break;
     }
 
-    setFilteredPets(filtered);
+    setFilteredMedicines(filtered);
   };
 
-  const addToCart = (pet) => {
+  const addToCart = (medicine) => {
+    if (!medicine.inStock) {
+      showNotification('This medicine is currently out of stock', 'error');
+      return;
+    }
+
     const cartItem = {
-      id: pet.id,
-      name: pet.name,
-      price: pet.price,
-      image: pet.image,
-      category: 'pet',
-      type: 'pet',
-      breed: pet.breed,
+      id: medicine.id,
+      name: medicine.name,
+      price: medicine.price,
+      image: medicine.image,
+      category: 'medicine',
+      type: 'medicine',
+      brand: medicine.brand,
+      weight: medicine.weight,
       quantity: 1,
-      link: pet.link || `/pets/${pet.id}`
+      link: medicine.link || `/medicines/${medicine.id}`
     };
 
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id);
@@ -175,11 +168,11 @@ export default function PetsPage() {
     setCart(newCart);
     setCartCount(newCart.reduce((total, item) => total + item.quantity, 0));
     saveCartToStorage(newCart);
-    showNotification(`Added ${pet.name} to cart!`, 'success');
+    showNotification(`Added ${medicine.name} to cart!`, 'success');
   };
 
-  const adoptNow = (pet) => {
-    addToCart(pet);
+  const buyNow = (medicine) => {
+    addToCart(medicine);
     setTimeout(() => {
       router.push('/checkout');
     }, 1000);
@@ -187,28 +180,29 @@ export default function PetsPage() {
 
   const clearFilters = () => {
     setFilters({
-      type: 'all',
-      breed: 'all',
-      age: 'all',
-      priceRange: 'all',
-      location: 'all'
+      category: 'all',
+      petType: 'all',
+      brand: 'all',
+      priceRange: 'all'
     });
     setSearchQuery('');
     setSortBy('featured');
   };
 
-  const getUniqueLocations = () => {
-    return [...new Set(pets.map(pet => pet.location))];
+  const getUniqueBrands = () => {
+    return [...new Set(medicines.map(medicine => medicine.brand))];
   };
 
-  const getTypeLabel = (type) => {
+  const getCategoryLabel = (category) => {
     const labels = {
-      'dog': 'Dog',
-      'cat': 'Cat',
-      'bird': 'Bird',
-      'rabbit': 'Rabbit'
+      'flea-tick': 'Flea & Tick',
+      'heartworm': 'Heartworm',
+      'dewormer': 'Dewormer',
+      'skin-allergy': 'Skin & Allergy',
+      'multi-purpose': 'Multi-Purpose',
+      'joint-health': 'Joint Health'
     };
-    return labels[type] || type;
+    return labels[category] || category;
   };
 
   if (loading) {
@@ -216,8 +210,8 @@ export default function PetsPage() {
       <div className="min-h-screen bg-slate-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-4 text-slate-600">Loading pets...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading medicines...</p>
           </div>
         </div>
       </div>
@@ -250,29 +244,29 @@ export default function PetsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/" className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-lg">P</span>
                 </div>
-                <span className="text-xl font-bold text-blue-600 hidden sm:block">PetCare</span>
+                <span className="text-xl font-bold text-emerald-600 hidden sm:block">PetCare</span>
               </Link>
               
               {/* Desktop Breadcrumb */}
               <div className="hidden md:flex items-center space-x-2 text-sm text-slate-600">
-                <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
+                <Link href="/" className="hover:text-emerald-600 transition-colors">Home</Link>
                 <span className="text-slate-300">/</span>
-                <span className="text-blue-600 font-semibold">Pets</span>
+                <span className="text-emerald-600 font-semibold">Medicines</span>
               </div>
             </div>
 
             {/* Page Title - Mobile */}
             <div className="md:hidden text-center flex-1">
-              <h1 className="text-lg font-bold text-slate-800">Adopt Pets</h1>
+              <h1 className="text-lg font-bold text-slate-800">Medicines</h1>
             </div>
 
             {/* Cart */}
             <Link 
               href="/cart" 
-              className="relative flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm"
+              className="relative flex items-center gap-2 bg-emerald-500 text-white px-3 py-2 rounded-lg hover:bg-emerald-600 transition-colors font-medium shadow-sm"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -288,7 +282,7 @@ export default function PetsPage() {
 
           {/* Mobile Breadcrumb */}
           <div className="md:hidden flex items-center justify-center space-x-2 text-sm text-slate-600 mt-3">
-            <Link href="/" className="hover:text-blue-600 transition-colors flex items-center">
+            <Link href="/" className="hover:text-emerald-600 transition-colors flex items-center">
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -299,14 +293,14 @@ export default function PetsPage() {
       </header>
 
       {/* Page Heading */}
-      <div className="bg-blue-50 border-b border-blue-100">
+      <div className="bg-emerald-50 border-b border-emerald-100">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center">
             <h1 className="text-2xl md:text-4xl font-bold text-slate-800 mb-3">
-              Find Your Perfect Pet
+              Pet Medicines & Healthcare
             </h1>
-            <p className="text-base md:text-xl text-blue-700 font-medium">
-              Discover loving pets waiting for their forever homes
+            <p className="text-base md:text-xl text-emerald-700 font-medium">
+              Premium veterinary medicines for your beloved pets
             </p>
           </div>
         </div>
@@ -323,8 +317,8 @@ export default function PetsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
             </svg>
             {isFiltersOpen ? 'Hide Filters' : 'Show Filters'}
-            <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 ml-1">
-              {filteredPets.length}
+            <span className="bg-emerald-500 text-white text-xs rounded-full px-2 py-1 ml-1">
+              {filteredMedicines.length}
             </span>
           </button>
         </div>
@@ -339,7 +333,7 @@ export default function PetsPage() {
                 <h2 className="text-lg font-semibold text-slate-800">Filters</h2>
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  className="text-sm text-emerald-600 hover:text-emerald-800 font-medium transition-colors"
                 >
                   Clear all
                 </button>
@@ -348,15 +342,15 @@ export default function PetsPage() {
               {/* Search */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Search Pets
+                  Search Medicines
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by name or breed..."
-                    className="w-full px-4 py-2.5 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                    placeholder="Search by name or brand..."
+                    className="w-full px-4 py-2.5 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -366,78 +360,56 @@ export default function PetsPage() {
                 </div>
               </div>
 
+              {/* Category */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Category
+                </label>
+                <select
+                  value={filters.category}
+                  onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="flea-tick">Flea & Tick</option>
+                  <option value="heartworm">Heartworm</option>
+                  <option value="dewormer">Dewormer</option>
+                  <option value="skin-allergy">Skin & Allergy</option>
+                  <option value="multi-purpose">Multi-Purpose</option>
+                  <option value="joint-health">Joint Health</option>
+                </select>
+              </div>
+
               {/* Pet Type */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Pet Type
                 </label>
                 <select
-                  value={filters.type}
-                  onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value, breed: 'all' }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                  value={filters.petType}
+                  onChange={(e) => setFilters(prev => ({ ...prev, petType: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                 >
-                  <option value="all">All Types</option>
+                  <option value="all">All Pets</option>
                   <option value="dog">Dogs</option>
                   <option value="cat">Cats</option>
-                  <option value="bird">Birds</option>
-                  <option value="rabbit">Rabbits</option>
                 </select>
               </div>
 
-              {/* Breed */}
+              {/* Brand */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Breed
+                  Brand
                 </label>
                 <select
-                  value={filters.breed}
-                  onChange={(e) => setFilters(prev => ({ ...prev, breed: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-                  disabled={getUniqueBreeds(filters.type).length === 0}
+                  value={filters.brand}
+                  onChange={(e) => setFilters(prev => ({ ...prev, brand: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                 >
-                  <option value="all">
-                    {filters.type === 'all' ? 'All Breeds' : `All ${getTypeLabel(filters.type)} Breeds`}
-                  </option>
-                  {getUniqueBreeds(filters.type).map(breed => (
-                    <option key={breed} value={breed}>{breed}</option>
+                  <option value="all">All Brands</option>
+                  {getUniqueBrands().map(brand => (
+                    <option key={brand} value={brand}>{brand}</option>
                   ))}
-                </select>
-                {filters.type !== 'all' && getUniqueBreeds(filters.type).length === 0 && (
-                  <p className="text-xs text-slate-500 mt-1">No breeds available for selected type</p>
-                )}
-              </div>
-
-              {/* Location */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Location
-                </label>
-                <select
-                  value={filters.location}
-                  onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-                >
-                  <option value="all">All Locations</option>
-                  {getUniqueLocations().map(location => (
-                    <option key={location} value={location}>{location}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Age */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Age
-                </label>
-                <select
-                  value={filters.age}
-                  onChange={(e) => setFilters(prev => ({ ...prev, age: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-                >
-                  <option value="all">All Ages</option>
-                  <option value="puppy">Puppy/Kitten (0-1 year)</option>
-                  <option value="young">Young (1-3 years)</option>
-                  <option value="adult">Adult (3+ years)</option>
                 </select>
               </div>
 
@@ -449,194 +421,205 @@ export default function PetsPage() {
                 <select
                   value={filters.priceRange}
                   onChange={(e) => setFilters(prev => ({ ...prev, priceRange: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                 >
                   <option value="all">All Prices</option>
-                  <option value="under-5000">Under ₹5,000</option>
-                  <option value="5000-10000">₹5,000 - ₹10,000</option>
-                  <option value="over-10000">Over ₹10,000</option>
+                  <option value="under-500">Under ₹500</option>
+                  <option value="500-1500">₹500 - ₹1,500</option>
+                  <option value="over-1500">Over ₹1,500</option>
                 </select>
               </div>
 
               {/* Results Count */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-sm text-blue-800 font-medium">
-                  <span className="font-bold">{filteredPets.length}</span> pets found
+              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                <p className="text-sm text-emerald-800 font-medium">
+                  <span className="font-bold">{filteredMedicines.length}</span> medicines found
                 </p>
-                {filters.type !== 'all' && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    Type: {getTypeLabel(filters.type)}
+                {filters.category !== 'all' && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    Category: {getCategoryLabel(filters.category)}
                   </p>
                 )}
-                {filters.location !== 'all' && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    Location: {filters.location}
+                {filters.petType !== 'all' && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    For: {filters.petType === 'dog' ? 'Dogs' : 'Cats'}
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Pets Grid */}
+          {/* Medicines Grid */}
           <div className="flex-1 min-w-0">
-            {/* Header with Sort */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-slate-800">
-                  {filters.type === 'all' ? 'All Pets' : getTypeLabel(filters.type) + 's'}
+                  {filters.category === 'all' ? 'All Medicines' : getCategoryLabel(filters.category)}
                 </h2>
                 <p className="text-slate-600 mt-1 text-sm md:text-base">
-                  {filters.breed !== 'all' ? `Breed: ${filters.breed}` : 'Find your perfect companion'}
+                  {filters.petType !== 'all' ? `For ${filters.petType === 'dog' ? 'Dogs' : 'Cats'}` : 'Premium pet healthcare products'}
                 </p>
               </div>
               <div className="flex items-center space-x-4">
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-sm"
+                  className="px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white text-sm"
                 >
                   <option value="featured">Sort by: Featured</option>
                   <option value="price-low-high">Sort by: Price (Low to High)</option>
                   <option value="price-high-low">Sort by: Price (High to Low)</option>
-                  <option value="age-low-high">Sort by: Age (Youngest First)</option>
-                  <option value="age-high-low">Sort by: Age (Oldest First)</option>
+                  <option value="rating">Sort by: Rating</option>
                   <option value="newest">Sort by: Newest</option>
+                  <option value="discount">Sort by: Discount</option>
                 </select>
               </div>
             </div>
 
-            {filteredPets.length === 0 ? (
+            {filteredMedicines.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
-                <div className="text-6xl mb-4">🐾</div>
-                <h3 className="text-xl font-semibold text-slate-800 mb-2">No pets found</h3>
+                <div className="text-6xl mb-4">💊</div>
+                <h3 className="text-xl font-semibold text-slate-800 mb-2">No medicines found</h3>
                 <p className="text-slate-600 mb-6">Try adjusting your filters or search terms</p>
                 <button
                   onClick={clearFilters}
-                  className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                  className="bg-emerald-600 text-white px-6 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-sm"
                 >
                   Clear all filters
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                {filteredPets.map(pet => (
-                  <div key={pet.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 border border-slate-200 group">
-                    {/* Pet Image with Link */}
-                    <Link href={`/pets/${pet.id}`} className="block">
+                {filteredMedicines.map(medicine => (
+                  <div key={medicine.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 border border-slate-200 group">
+                    {/* Product Image with Link */}
+                    <Link href={`/medicines/${medicine.id}`} className="block">
                       <div className="relative h-64 overflow-hidden">
                         <img
-                          src={pet.image}
-                          alt={pet.name}
+                          src={medicine.image}
+                          alt={medicine.name}
                           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                         />
 
                         {/* Badge */}
                         <div className="absolute top-3 left-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-bold text-white shadow-lg ${
-                            pet.badge === 'Friendly' ? 'bg-emerald-500' :
-                            pet.badge === 'Calm' ? 'bg-blue-500' :
-                            pet.badge === 'Active' ? 'bg-orange-500' :
-                            pet.badge === 'Playful' ? 'bg-purple-500' :
-                            pet.badge === 'Talkative' ? 'bg-cyan-500' :
-                            pet.badge === 'Gentle' ? 'bg-pink-500' :
-                            pet.badge === 'Loyal' ? 'bg-rose-500' :
-                            pet.badge === 'Curious' ? 'bg-yellow-500' :
-                            pet.badge === 'Majestic' ? 'bg-indigo-500' :
-                            pet.badge === 'Energetic' ? 'bg-red-500' :
+                            medicine.badge === 'Bestseller' ? 'bg-amber-500' :
+                            medicine.badge === 'Top Rated' ? 'bg-emerald-500' :
+                            medicine.badge === 'Long Lasting' ? 'bg-blue-500' :
+                            medicine.badge === 'Effective' ? 'bg-green-500' :
+                            medicine.badge === 'Complete Care' ? 'bg-purple-500' :
+                            medicine.badge === 'Fast Relief' ? 'bg-rose-500' :
+                            medicine.badge === 'Chewable' ? 'bg-orange-500' :
+                            medicine.badge === 'Heart Care' ? 'bg-red-500' :
+                            medicine.badge === 'Multi-Protection' ? 'bg-indigo-500' :
+                            medicine.badge === 'Joint Care' ? 'bg-cyan-500' :
                             'bg-slate-500'
                           }`}>
-                            {pet.badge}
+                            {medicine.badge}
                           </span>
                         </div>
 
                         {/* Pet Type Badge */}
                         <div className="absolute top-3 right-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-bold text-white shadow-lg ${
-                            pet.type === 'dog' ? 'bg-amber-600' : 
-                            pet.type === 'cat' ? 'bg-indigo-500' : 
-                            pet.type === 'bird' ? 'bg-emerald-500' : 'bg-pink-500'
+                            medicine.petType === 'dog' ? 'bg-amber-600' : 
+                            medicine.petType === 'cat' ? 'bg-indigo-500' : 'bg-emerald-500'
                           }`}>
-                            {pet.type === 'dog' ? '🐶 Dog' : 
-                             pet.type === 'cat' ? '🐱 Cat' : 
-                             pet.type === 'bird' ? '🦜 Bird' : '🐰 Rabbit'}
+                            {medicine.petType === 'dog' ? '🐶 Dog' : 
+                             medicine.petType === 'cat' ? '🐱 Cat' : '🐾 Both'}
                           </span>
                         </div>
 
-                        {/* Vaccination Badge */}
-                        <div className="absolute top-12 left-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold text-white shadow-lg ${
-                            pet.vaccination === 'Fully Vaccinated' ? 'bg-emerald-500' :
-                            pet.vaccination === 'Partially Vaccinated' ? 'bg-yellow-500' :
-                            'bg-slate-500'
-                          }`}>
-                            {pet.vaccination}
-                          </span>
-                        </div>
+                        {/* Discount */}
+                        {medicine.discount && (
+                          <div className="absolute top-12 left-3 bg-rose-500 text-white px-2 py-1 rounded-full font-bold text-xs shadow-lg">
+                            {medicine.discount}% OFF
+                          </div>
+                        )}
+
+                        {/* Out of Stock Overlay */}
+                        {!medicine.inStock && (
+                          <div className="absolute inset-0 bg-slate-800 bg-opacity-60 flex items-center justify-center">
+                            <span className="bg-white text-slate-800 px-4 py-2 rounded-lg font-bold text-sm">
+                              Out of Stock
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </Link>
 
                     <div className="p-4">
-                      {/* Pet Title with Link */}
-                      <Link href={`/pets/${pet.id}`} className="block mb-2">
-                        <h3 className="text-lg font-bold text-slate-800 flex-1 pr-2 hover:text-blue-600 transition-colors">
-                          {pet.name}
+                      {/* Product Title with Link */}
+                      <Link href={`/medicines/${medicine.id}`} className="block mb-2">
+                        <h3 className="text-lg font-bold text-slate-800 flex-1 pr-2 hover:text-emerald-600 transition-colors">
+                          {medicine.name}
                         </h3>
                       </Link>
 
                       <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
-                          <span className="text-blue-500 text-sm">⭐</span>
-                          <span className="font-bold text-slate-800 text-sm">{pet.breed}</span>
+                        <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
+                          <span className="text-emerald-500 text-sm">⭐</span>
+                          <span className="font-bold text-slate-800 text-sm">{medicine.rating}</span>
+                          <span className="text-slate-500 text-xs">({medicine.reviews})</span>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          pet.gender === 'male' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
-                        }`}>
-                          {pet.gender === 'male' ? '♂ Male' : '♀ Female'}
+                        <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                          {medicine.brand}
                         </span>
                       </div>
 
-                      <p className="text-slate-600 text-sm mb-3 line-clamp-2">{pet.description}</p>
+                      <p className="text-slate-600 text-sm mb-3 line-clamp-2">{medicine.description}</p>
 
-                      {/* Location & Health */}
+                      {/* Dosage & Weight */}
                       <div className="mb-4">
                         <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                          <span className="bg-slate-100 px-2 py-1 rounded">📍 {pet.location}</span>
-                          <span className={`px-2 py-1 rounded ${
-                            pet.health === 'Excellent' ? 'bg-emerald-100 text-emerald-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            🩺 {pet.health}
-                          </span>
+                          <span className="bg-slate-100 px-2 py-1 rounded">💊 {medicine.dosage}</span>
+                          <span className="bg-slate-100 px-2 py-1 rounded">⚖️ {medicine.weight}</span>
+                          <span className="bg-slate-100 px-2 py-1 rounded">📦 {medicine.quantity}</span>
                         </div>
                       </div>
 
-                      {/* Age and Price */}
+                      {/* Price and Action */}
                       <div className="pt-3 border-t border-slate-200">
                         <div className="flex justify-between items-center mb-3">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-600 text-sm">Age: {pet.age} year{pet.age > 1 ? 's' : ''}</span>
+                              <span className="text-xl font-bold text-slate-800">₹{medicine.price}</span>
+                              {medicine.originalPrice > medicine.price && (
+                                <span className="text-rose-500 line-through text-sm">₹{medicine.originalPrice}</span>
+                              )}
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-xl font-bold text-slate-800">₹{pet.price.toLocaleString()}</span>
-                            <p className="text-emerald-600 text-xs font-medium">Adoption Fee</p>
+                            {medicine.originalPrice > medicine.price && (
+                              <p className="text-emerald-600 text-xs font-medium">
+                                Save ₹{medicine.originalPrice - medicine.price}
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         {/* Action Buttons */}
                         <div className="flex gap-2">
                           <button
-                            onClick={() => adoptNow(pet)}
-                            className="flex-1 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm bg-blue-500 text-white hover:bg-blue-600"
-                          >
-                            Adopt Now
-                          </button>
-                          <button
-                            onClick={() => addToCart(pet)}
-                            className="flex-1 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm bg-emerald-500 text-white hover:bg-emerald-600"
+                            onClick={() => addToCart(medicine)}
+                            disabled={!medicine.inStock}
+                            className={`flex-1 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm ${
+                              medicine.inStock
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            }`}
                           >
                             Add to Cart
+                          </button>
+                          <button
+                            onClick={() => buyNow(medicine)}
+                            disabled={!medicine.inStock}
+                            className={`flex-1 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm ${
+                              medicine.inStock
+                                ? 'bg-slate-800 text-white hover:bg-slate-900'
+                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            }`}
+                          >
+                            Buy Now
                           </button>
                         </div>
                       </div>
@@ -653,11 +636,11 @@ export default function PetsPage() {
           <div className="fixed bottom-4 right-4 z-50">
             <Link
               href="/cart"
-              className="bg-blue-500 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 font-bold flex items-center gap-2 hover:bg-blue-600"
+              className="bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 font-bold flex items-center gap-2 hover:bg-emerald-600"
             >
               <span>🛒</span>
               <span>Cart ({cartCount})</span>
-              <span className="bg-white text-blue-600 px-2 py-1 rounded-full text-sm">
+              <span className="bg-white text-emerald-600 px-2 py-1 rounded-full text-sm">
                 ₹{cart.reduce((total, item) => total + (item.price * item.quantity), 0).toLocaleString()}
               </span>
             </Link>
