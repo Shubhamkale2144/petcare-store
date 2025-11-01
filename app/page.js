@@ -1477,7 +1477,7 @@ function Footer() {
           <div>
             <h4 className="font-bold mb-3">Shop</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li><Link href="/products" className="hover:text-white">All products</Link></li>
+              <li><Link href="/product" className="hover:text-white">All products</Link></li>
               <li><Link href="/pets" className="hover:text-white">Pet Adoption</Link></li>
               <li><Link href="/food" className="hover:text-white">Pet Food</Link></li>
               <li><Link href="/clothes" className="hover:text-white">Pet clothes</Link></li>
