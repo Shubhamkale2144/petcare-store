@@ -580,7 +580,7 @@ function Header({ searchQuery, setSearchQuery, isSearchFocused, setIsSearchFocus
             <div className="lg:hidden mt-3 bg-gray-50 border rounded-lg p-3">
               <nav className="flex flex-col space-y-1">
                 {[
-                  'All Products', 'Pets', 'Accessories', 'Clothes', 'Food',
+                  'Products', 'Pets', 'Accessories', 'Clothes', 'Food',
                   'Medicines', 'Veterinarians', 'Sell Your Pet'
                 ].map((item) => (
                   <Link
